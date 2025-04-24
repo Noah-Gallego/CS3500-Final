@@ -1,0 +1,13 @@
+name: 'CS3500 Bolt Job'
+description: 'Train Model Via Bolt.'
+tags: [ai-edu]
+setup_command: 'bash setup.sh'
+command: 'python run.py'
+parameters:
+  epochs: '75'
+  learning_rate: '0.001'
+  momentum: '0.9'
+resources: 
+  docker_image: 'docker.apple.com/turibolt/turibolt-python3:20230425.1'
+  num_cpus: 5
+  num_gpus: 5
