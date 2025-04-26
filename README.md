@@ -37,7 +37,7 @@ Note: Some data may include missing, duplicate, or malformed entries.
 Before running the script, ensure you have the following:
 
 ```bash
-pip install pandas numpy scikit-learn tensorflow matplotlib
+pip (or conda) install pandas numpy scikit-learn tensorflow matplotlib
 ```
 
 ---
@@ -47,6 +47,7 @@ pip install pandas numpy scikit-learn tensorflow matplotlib
 - Drop unnecessary columns
 - Handle missing or malformed values
 - Remove duplicates and outliers
+- Feature Engineering
 - Encode categorical variables appropriately
 - Convert data types as needed
 
@@ -132,9 +133,9 @@ Submit to Canvas:
 # PYTHON IMPLEMENTATION: Crime Status Prediction
 # date: 04/10/2025
 # Student 1: Noah Gallego
-# Student 2: John Smith
-# Student 3: Jane Doe
-# Student 4: Alice Johnson
+# Student 2: Marlon
+# Student 3: Jon
+# Student 4: Braden
 # description: Implementation of data cleaning, deep learning model, and predictions for LA crime data.
 ```
 
