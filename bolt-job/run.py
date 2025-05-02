@@ -172,19 +172,8 @@ def main():
     all_labels = np.array(all_labels)
 
     precision, recall, thresholds = precision_recall_curve(all_labels, all_probs)
-    
-    # Flip labels and probs to treat class 0 as the "positive" class
-    flipped_labels = 1 - all_labels
-    flipped_probs = 1 - all_probs
-
-    precision, recall, thresholds = precision_recall_curve(flipped_labels, flipped_probs)
-    f1_scores = 2 * precision * recall / (precision + recall + 1e-6)
-
-    # Best threshold for class 0 F1
-    best_idx = np.argmax(f1_scores)
-    best_thresh = 1 - thresholds[best_idx]  # flip back
-
-    print(f"📍 Best threshold to maximize F1 for class 0: {best_thresh:.4f}")
+    f1_class_0 = 2 * precision * recall / (precision + recall + 1e-6)
+    best_thresh = 0.58
 
     preds = (np.array(all_probs) > best_thresh).astype(int)
 
