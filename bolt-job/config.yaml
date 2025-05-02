@@ -4,7 +4,7 @@ tags: [ai-edu]
 setup_command: 'bash setup.sh'
 command: 'python run.py'
 parameters:
-  epochs: '75'
+  epochs: '500'
   learning_rate: '0.001'
   momentum: '0.9'
 resources: 
