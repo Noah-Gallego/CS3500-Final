@@ -208,6 +208,8 @@ class MLPModel(nn.Module):
         return self.fc3(x)
 
 # Globals (To Prevent Errors)
+test_bool, train_bool, clean_bool, trained_bool = None, None, None, None
+trans_model, mlp_model = None, None
 
 # Helper function for timestamp
 def timestamp(): 
