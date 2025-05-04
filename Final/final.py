@@ -707,10 +707,6 @@ def predict(df):
                             ['id', 'dr_no', 'code', 'status', 'report', '__origin'])]
         
         if potential_leakage:
-            print("\nPotential leakage columns detected:")
-            for col in potential_leakage:
-                print(f"  - {col}")
-                
             if '__origin' in df.columns:
                 print("Removing __origin column used for data splitting")
                 df = df.drop(columns=['__origin'])
