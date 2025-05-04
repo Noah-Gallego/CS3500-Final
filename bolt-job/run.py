@@ -146,11 +146,11 @@ def main():
             if avg_loss < best_loss:
                 best_loss = avg_loss
                 epochs_no_improve = 0
-                torch.save(model.module.state_dict() if isinstance(model, nn.DataParallel) else model.state_dict(),
-            f"{bolt.ARTIFACT_DIR}/model_{i+1}.pt")
+                torch.save(model.module.state_dict() if isinstance(model, nn.DataParallel) else model.state_dict(), f"{bolt.ARTIFACT_DIR}/model_{i+1}.pt")
             else:
                 epochs_no_improve += 1
                 if epochs_no_improve >= patience:
+                    print("🛑 Early Stopping Triggered at Epoch: ", epoch)
                     break
 
     trans_model.load_state_dict(torch.load(f"{bolt.ARTIFACT_DIR}/model_1.pt"))
@@ -165,6 +165,7 @@ def main():
             t_out = torch.sigmoid(trans_model(X_batch))
             m_out = torch.sigmoid(mlp_model(X_batch))
             probs = ((t_out + m_out) / 2).squeeze(1)
+            probs = t_out.squeeze(1)
             all_probs.extend(probs.cpu().numpy())
             all_labels.extend(y_batch.numpy())
 
@@ -173,7 +174,7 @@ def main():
 
     precision, recall, thresholds = precision_recall_curve(all_labels, all_probs)
     f1_class_0 = 2 * precision * recall / (precision + recall + 1e-6)
-    best_thresh = 0.58
+    best_thresh = 0.52
 
     preds = (np.array(all_probs) > best_thresh).astype(int)
 
