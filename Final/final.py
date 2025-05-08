@@ -14,6 +14,9 @@ with warnings.catch_warnings():
     warnings.simplefilter("ignore", category=RuntimeWarning)
 
 def spinner(message, show_done=False):
+    """
+    
+    """
     done_event = threading.Event()
 
     def spin():
