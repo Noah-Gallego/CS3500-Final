@@ -825,6 +825,9 @@ def train_nn(df):
 # MAKE PREDICTIONS
 # ----------------------
 def predict(df):
+    """
+    This function evaluates the model given a test set.
+    """
     global trans_model, mlp_model, device, predictions_data
     
     print("\n*********************")
@@ -1044,6 +1047,9 @@ def predict(df):
 # ACCURACY FUNCTION
 # ----------------------
 def accuracy():
+    """
+    Returns accuracy and generates performance plots.
+    """
     global predictions_data
     
     if 'predictions_data' not in globals() or predictions_data is None:
@@ -1103,22 +1109,8 @@ def accuracy():
 # PREPROCESS FOR PREDICTION
 # ----------------------
 def preprocess_for_prediction(df, model_set, model_path_prefix="Final/"):
-    """Prepare test data for prediction by aligning with training data format and scaling.
-    
-    This function:
-    1. Loads shared_columns.pkl for column alignment
-    2. Loads scaler.pkl for consistent scaling
-    3. Aligns test data columns with training data
-    4. Applies the same scaling as used during training
-    
-    Args:
-        df: DataFrame containing test data
-        model_set: String indicating which model set to use ('script_models' or 'bolt_models')
-        model_path_prefix: Prefix for model paths
-        
-    Returns:
-        X_test_scaled: Numpy array of scaled and aligned test features
-        y_test: Target values if present in df
+    """
+    Prepare test data for prediction by aligning with training data format and scaling.
     """
     # Set model path based on specified model set
     model_path = f"{model_path_prefix}models/{model_set}"
@@ -1203,92 +1195,6 @@ def preprocess_for_prediction(df, model_set, model_path_prefix="Final/"):
         return X_test_scaled, y_test
     else:
         return X_test_scaled
-
-# Simple identity scaler for bolt models compatibility
-class IdentityScaler:
-    """Identity scaler that ensures the output has the exactly features."""
-    def transform(self, X):
-        # Convert X to numpy
-        if not isinstance(X, np.ndarray):
-            X = np.array(X)
-            
-        # If X has more than 593 columns, truncate it
-        if X.shape[1] > 593:
-            return X[:, :593]
-        # If X has fewer than 593 columns, pad with zeros
-        elif X.shape[1] < 593:
-            padded_X = np.zeros((X.shape[0], 593))
-            padded_X[:, :X.shape[1]] = X
-            return padded_X
-        return X
-            
-    def fit_transform(self, X, y=None):
-        return self.transform(X)
-
-# ----------------------
-# CREATE BOLT MODEL COMPATIBILITY
-# ----------------------
-def create_bolt_compatibility():
-    """Create preprocessing files compatible with the pre-trained bolt models.
-    This function analyzes the bolt model input dimensions and creates compatible
-    preprocessing files to ensure dimension matching during prediction.
-    """
-    bolt_model_path = None
-    bolt_dirs = [
-        "models/bolt_models",
-        "Final/models/bolt_models", 
-        "../models/bolt_models",
-        "./models/bolt_models"
-    ]
-    
-    for dir_path in bolt_dirs:
-        if os.path.exists(f"{dir_path}/model_1.pt"):
-            bolt_model_path = dir_path
-            break
-    
-    if bolt_model_path is None:
-        print("🛑 Bolt models not found. Cannot create compatibility files.")
-        return False
-    
-    print(f"Found bolt models in {bolt_model_path}")
-    
-    # Create directory for bolt preprocessing files if it doesn't exist
-    os.makedirs(bolt_model_path, exist_ok=True)
-    
-    # Load model to determine input dimension
-    temp_model = TabTransformer(593).to(device)  # 593 is the expected dimension
-    try:
-        temp_model.load_state_dict(torch.load(f"{bolt_model_path}/model_1.pt", map_location=device))
-        print("Successfully loaded bolt model to determine dimensions")
-        
-        # Create a dummy shared_columns list with 593 features
-        shared_columns = [f"feature_{i}" for i in range(593)]
-        
-        # Save to bolt_models directory
-        with open(f"{bolt_model_path}/shared_columns.pkl", "wb") as f:
-            pickle.dump(shared_columns, f)
-        
-        # Save the identity scaler - now defined globally
-        scaler = IdentityScaler()
-        try:
-            if joblib is not None:
-                joblib.dump(scaler, f"{bolt_model_path}/scaler.pkl")
-            else:
-                with open(f"{bolt_model_path}/scaler.pkl", 'wb') as f:
-                    pickle.dump(scaler, f)
-        except Exception as e:
-            print(f"Error saving scaler: {str(e)}. Using pickle instead.")
-            with open(f"{bolt_model_path}/scaler.pkl", 'wb') as f:
-                pickle.dump(scaler, f)
-        
-        print(f"Created compatibility files in {bolt_model_path}")
-        print("- shared_columns.pkl: Contains 593 feature names")
-        print("- scaler.pkl: Ensures 593 feature dimensions")
-        
-        return True
-    except Exception as e:
-        print(f"Error creating compatibility files: {str(e)}")
-        return False
 
 # ----------------------
 # MAIN MENU FUNCTION
