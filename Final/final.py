@@ -12,6 +12,14 @@ import os
 import pickle
 import joblib
 
+# Initialize all global variables to prevent reference before assignment
+train_df, test_df, df = None, None, None
+train_bool, test_bool, clean_bool, trained_bool = None, None, None, None
+torch_available = False
+libraries_status = {"core": True, "data": False, "ml": False, "nn": False}
+predictions_data = None
+trans_model, mlp_model = None, None
+
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", category=RuntimeWarning)
 
@@ -33,14 +41,15 @@ def spinner(message, show_done=False):
         for c in itertools.cycle('|/-\\'):
             if done_event.is_set():
                 break
-            sys.stdout.write(f'\r{message}... {c}' + ' ' * 20)  # Add padding to clear previous text
+            sys.stdout.write(f'\r{message}... {c}') 
             sys.stdout.flush()
             time.sleep(0.1)
+            
         # Clear the spinner line completely
-        sys.stdout.write('\r' + ' ' * 100 + '\r')
+        sys.stdout.write('\r' + ' ' * (len(message) + 10) + '\r')
+        sys.stdout.flush()
         if show_done:
-            sys.stdout.write('Done! ✅\n')
-            sys.stdout.flush()
+            print('Done! ✅')
 
     thread = threading.Thread(target=spin, daemon=True)
     thread.start()
@@ -53,10 +62,8 @@ def spinner(message, show_done=False):
             try:
                 thread.join(timeout=1.0)  # Add timeout to prevent hanging
             except Exception:
-                pass  # Ignore join errors
-            spinner_active = False  # Mark spinner as inactive
-            # Add a newline to ensure next output starts on clean line
-            print()
+                pass
+            spinner_active = False
     
     return stop_and_join
 
@@ -68,108 +75,155 @@ def clear_screen():
 # IMPORT LIBRARIES
 # ----------------------
 def import_libraries():
+    """
+    This function imports all necessary libraries and sets up the global variables.
+    """
     stop_spinner = spinner("Loading dependencies...", show_done=True)
-
+    
+    # Dictionary to track available libraries
+    libraries_available = {"core": True, "data": True, "ml": True, "nn": torch_available}
+    
     # Core modules
-    import os
-    import sys
-    import time
-    import random
-    from datetime import datetime, timedelta
-    from collections import Counter
-    import itertools
+    try:
+        import os
+        import sys
+        import time
+        import random
+        from datetime import datetime, timedelta
+        from collections import Counter
+        import itertools
+    except ImportError as e:
+        print(f"Warning: Some core libraries not available: {e}")
+        libraries_available["core"] = False
 
     # Data handling & visualization
-    import pandas as pd
-    import numpy as np
-    import matplotlib.pyplot as plt
-    import seaborn as sns
-    from tqdm import tqdm
+    try:
+        import pandas as pd
+        import numpy as np
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+        from tqdm import tqdm
+    except ImportError as e:
+        print(f"Warning: Some data libraries not available: {e}")
+        libraries_available["data"] = False
 
     # Sklearn tools
-    from sklearn.preprocessing import LabelEncoder, PowerTransformer
-    from sklearn.feature_extraction.text import CountVectorizer
-    from sklearn.decomposition import PCA
-    from sklearn.cluster import KMeans
-    from sklearn.metrics import (
-        classification_report,
-        precision_recall_curve,
-        roc_curve,
-        auc,
-        confusion_matrix,
-        accuracy_score,
-        precision_score,
-        recall_score,
-        f1_score,
-        roc_auc_score
-    )
+    try:
+        from sklearn.preprocessing import LabelEncoder, PowerTransformer
+        from sklearn.feature_extraction.text import CountVectorizer
+        from sklearn.decomposition import PCA
+        from sklearn.cluster import KMeans
+        from sklearn.metrics import (
+            classification_report,
+            precision_recall_curve,
+            roc_curve,
+            auc,
+            confusion_matrix,
+            accuracy_score,
+            precision_score,
+            recall_score,
+            f1_score,
+            roc_auc_score
+        )
+    except ImportError as e:
+        print(f"Warning: Machine learning libraries not available: {e}")
+        libraries_available["ml"] = False
 
-    # PyTorch
-    import torch
-    import torch.nn as nn
-    from torch.utils.data import Dataset, DataLoader
-    from torch.optim.lr_scheduler import ReduceLROnPlateau
+
+    # PyTorch - already imported at module level 
+    if not torch_available:
+        print("Note: PyTorch not available. Training and prediction functionality will be limited.")
 
     # Resampling
-    from imblearn.over_sampling import SMOTE
+    try:
+        from imblearn.over_sampling import SMOTE
+        smote_available = True
+    except ImportError:
+        print("Warning: SMOTE not available. Will not be able to handle class imbalance.")
+        smote_available = False
 
-    # Promote to global scope
-    globals().update({
-        # Core
-        'os': os,
-        'sys': sys,
-        'time': time,
-        'random': random,
-        'datetime': datetime,
-        'timedelta': timedelta,
-        'Counter': Counter,
-        'itertools': itertools,
 
-        # Data & viz
+    # Promote available libraries to global scope
+    globals_dict = {}
+    
+    # Add core libraries if available
+    if libraries_available["core"]:
+        globals_dict.update({
+            'os': os,
+            'sys': sys,
+            'time': time,
+            'random': random,
+            'datetime': datetime,
+            'timedelta': timedelta,
+            'Counter': Counter,
+            'itertools': itertools,
+        })
+    
+    # Add data libraries if available
+    globals_dict.update({
         'pd': pd,
         'np': np,
-        'plt': plt,
-        'sns': sns,
-        'tqdm': tqdm,
-
-        # Sklearn
+    })
+    
+    if libraries_available["data"]:
+        globals_dict.update({
+            'plt': plt,
+            'sns': sns,
+            'tqdm': tqdm,
+        })
+    
+    # Add ML libraries if available
+    globals_dict.update({
         'LabelEncoder': LabelEncoder,
         'PowerTransformer': PowerTransformer,
         'CountVectorizer': CountVectorizer,
         'PCA': PCA,
         'KMeans': KMeans,
-        'classification_report': classification_report,
-        'precision_recall_curve': precision_recall_curve,
-        'roc_curve': roc_curve,
-        'auc': auc,
-        'confusion_matrix': confusion_matrix,
-        'accuracy_score': accuracy_score,
-        'precision_score': precision_score,
-        'recall_score': recall_score,
-        'f1_score': f1_score,
-        'roc_auc_score': roc_auc_score,
-
-        # PyTorch
-        'torch': torch,
-        'nn': nn,
-        'Dataset': Dataset,
-        'DataLoader': DataLoader,
-        'ReduceLROnPlateau': ReduceLROnPlateau,
-
-        # Others
-        'SMOTE': SMOTE,
     })
+    
+    if libraries_available["ml"]:
+        globals_dict.update({
+            'classification_report': classification_report,
+            'precision_recall_curve': precision_recall_curve,
+            'roc_curve': roc_curve,
+            'auc': auc,
+            'confusion_matrix': confusion_matrix,
+            'accuracy_score': accuracy_score,
+            'precision_score': precision_score,
+            'recall_score': recall_score,
+            'f1_score': f1_score,
+            'roc_auc_score': roc_auc_score,
+        })
+    
+    # Add SMOTE if available
+    if smote_available:
+        globals_dict['SMOTE'] = SMOTE
+    
+    # Update global namespace
+    globals().update(globals_dict)
+    
+    # Store library status for function availability checks
+    global libraries_status
+    libraries_status = libraries_available
 
     stop_spinner()
 
 # Neural Network Global Class Definitions
-import torch
-import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
-from torch.optim.lr_scheduler import ReduceLROnPlateau
+try:
+    import torch
+    import torch.nn as nn
+    from torch.utils.data import Dataset, DataLoader
+    from torch.optim.lr_scheduler import ReduceLROnPlateau
+    torch_available = True
+except ImportError:
+    print("Warning: PyTorch libraries not found. Neural network functionality will be limited.")
+
 
 # ---------------- Device ----------------
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+if torch_available:
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+else:
+    device = "cpu"
 
 # ---------------- Dataset ----------------
 class CrimeDataset(Dataset):
@@ -241,7 +295,10 @@ def timestamp():
 # LOAD DATA (TRAIN OR TEST)
 # ----------------------
 def load_data(file_path, label):
-    stop_spinner = spinner(f"\nLoading {label}ing set:")
+    """
+    This function loads the training or test data.
+    """
+    stop_spinner = spinner(f"\nLoading {label}ing set")
     print("\n*********************")
 
     global train_df, test_df, train_bool, test_bool
@@ -280,11 +337,15 @@ def load_data(file_path, label):
 # PROCESS (CLEAN) DATA
 # ----------------------
 def process_data():
+    """
+    This function processes the data.
+    """
     # Mark Bool As Clean For NN
     global train_df, test_df, clean_bool, df
     clean_bool = True
 
     # Combine Data For Cleaning
+    print("\n*********************")
     stop_spinner = spinner("Cleaning Data....", show_done=True)
     start = time.time()
 
@@ -623,11 +684,17 @@ def process_data():
 # ----------------------
 # Helper Function
 def init_models(input_dim):
+    """
+    This function initializes the models.
+    """
     global trans_model, mlp_model
     trans_model = TabTransformer(input_dim).to(device)
     mlp_model = MLPModel(input_dim).to(device)
 
 def train_nn(df):
+    """
+    This function trains the neural network.
+    """
     # Mark Trained Bool as True (Globally)
     global trans_model, mlp_model, train_loader, test_loader, trained_bool
     
@@ -760,14 +827,14 @@ def train_nn(df):
 def predict(df):
     global trans_model, mlp_model, device, predictions_data
     
+    print("\n*********************")
+    print("Evaluating models with the test data")
+    print(f"Data shape: {df.shape}")
+    
     # Initial spinner for the overall process
     stop_spinner = spinner("Preparing data for prediction")
     
     try:
-        print("\n*********************")
-        print("Evaluating models with the test data")
-        print(f"Data shape: {df.shape}")
-        
         # Check if test data has the target column to evaluate accuracy
         if 'arrest_type' in df.columns:
             df = df[df['arrest_type'].isin([0, 1])].reset_index(drop=True)
@@ -777,7 +844,7 @@ def predict(df):
             has_target = False
             print("No target column found. Will generate predictions only.")
         
-        # Check which model sets are available - simplified paths based on debug output
+        # Check which model sets are available
         script_models_available = (os.path.exists("models/script_models/model_1.pt") and 
                                   os.path.exists("models/script_models/model_2.pt") and 
                                   os.path.exists("models/script_models/scaler.pkl") and 
@@ -796,11 +863,14 @@ def predict(df):
         # Set default model path prefix based on working directory
         model_path_prefix = ""
         
+        # Stop the spinner before asking for user input
+        stop_spinner()
+        
         # Ask user which model set to use if both are available
         model_set = None
         if script_models_available and bolt_models_available:
             print("\nBoth user-trained models and pre-trained models are available.")
-            choice = input("Use (1) user-trained models or (2) pre-trained models? (1/2): ")
+            choice = input("Use (1) (HIGHLY RECOMMENDED) user-trained models or (2) (OLD) pre-trained models? (1/2): ")
             model_set = "script_models" if choice == "1" else "bolt_models"
         elif script_models_available:
             print("\nUsing user-trained models (script_models).")
@@ -810,19 +880,19 @@ def predict(df):
             model_set = "bolt_models"
         else:
             print("\n❌ No models found. Please train models first (option 3).")
-            stop_spinner()
             return None
         
         model_path = f"{model_path_prefix}models/{model_set}"
         print(f"Loading models from {model_path}")
         
-        # Use our preprocessing function to prepare test data
+        # Start a new spinner for preprocessing
+        stop_spinner = spinner("Preprocessing data")
+        
         try:
             if has_target:
                 X_test_scaled, y_test = preprocess_for_prediction(df, model_set, model_path_prefix)
             else:
                 X_test_scaled = preprocess_for_prediction(df, model_set, model_path_prefix)
-                # Create dummy target for DataLoader compatibility
                 y_test = pd.Series(np.zeros(X_test_scaled.shape[0]))
         except Exception as e:
             print(f"\nError in preprocessing: {str(e)}")
@@ -860,9 +930,9 @@ def predict(df):
         stop_spinner()
         
         # Make predictions
-        stop_spinner = spinner("Running inference with ensemble models")
+        stop_spinner = spinner("Running with ensemble models")
         
-        # Create a PyTorch dataset and dataloader for efficient batching
+        # Create a dataset and dataloader
         test_dataset = CrimeDataset(X_test_scaled, y_test)
         test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
         
@@ -1119,19 +1189,9 @@ def preprocess_for_prediction(df, model_set, model_path_prefix="Final/"):
     for col in missing_cols:
         X_test[col] = 0
     
-    if missing_cols:
-        print(f"Added {len(missing_cols)} columns that were in training but not in test data")
-    
-    # Remove extra columns
-    if extra_cols:
-        print(f"Removing {len(extra_cols)} columns not present in training data")
-        X_test = X_test.drop(columns=list(extra_cols))
-    
     # Ensure column order matches training data
     X_test = X_test[shared_columns]
-    
-    print(f"Aligned test data shape: {X_test.shape}")
-    
+        
     # Apply scaling
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
@@ -1234,8 +1294,11 @@ def create_bolt_compatibility():
 # MAIN MENU FUNCTION
 # ----------------------
 def menu():
-    # Mark DF as Global for NN
-    global train_df, test_df, df, train_bool, test_bool, clean_bool, trained_bool
+    # Initialize globals
+    global train_df, test_df, df, train_bool, test_bool, clean_bool, trained_bool, libraries_status
+    
+    if 'libraries_status' not in globals():
+        libraries_status = {"core": True, "data": False, "ml": False, "nn": False}
 
     # Initialize flags if they don't exist
     if 'train_bool' not in globals():
@@ -1279,14 +1342,29 @@ def menu():
             
         if status:
             print("Current state:", " | ".join(status))
+            
+        # Display library status warnings
+        if not libraries_status["data"]:
+            print("⚠️  Warning: Data processing libraries not available. Some functions may not work.")
+        if not libraries_status["ml"]:
+            print("⚠️  Warning: Machine learning libraries not available. Analysis functions may not work.")
+        if not libraries_status["nn"]:
+            print("⚠️  Warning: Neural network libraries not available. Training and prediction will not work.")
 
         # Buffer Delay
         sys.stdout.flush()
         time.sleep(0.1)
+        
+        # Get user choice with clear input
         choice = input("Enter your choice: ")
-
+        
+        # Process the user choice
         if choice == '1':
             # Load training data
+            if not libraries_status["data"]:
+                print("🛑 Data libraries (pandas) not available. Cannot load training data.")
+                continue
+                
             file_path = input("Please enter the file path for the training data (Enter for default):")
             if file_path == "":
                 file_path = "../Data/Dirty/LA_Crime_Data_2023_to_Present_data.csv"
@@ -1294,6 +1372,10 @@ def menu():
             
         elif choice == '2':
             # Process data
+            if not libraries_status["data"] or not libraries_status["ml"]:
+                print("🛑 Required libraries not available. Cannot process data.")
+                continue
+                
             if train_bool is None and test_bool is None:
                 print("🛑 You need to load either training or test data first.")
             else:
@@ -1301,6 +1383,10 @@ def menu():
                 
         elif choice == '3':
             # Train neural network - requires cleaned data
+            if not libraries_status["nn"]:
+                print("🛑 PyTorch libraries not available. Cannot train neural network.")
+                continue
+                
             if clean_bool is None:
                 print("🛑 Dataset must be cleaned & loaded prior to training.")
             elif train_bool is None:
@@ -1310,6 +1396,10 @@ def menu():
                 
         elif choice == '4':
             # Load test data
+            if not libraries_status["data"]:
+                print("🛑 Data libraries (pandas) not available. Cannot load test data.")
+                continue
+                
             file_path = input("Please enter the file path for the test data (Enter for default):")
             if file_path == "":
                 file_path = "../Data/Dirty/LA_Crime_Data_2023_to_Present_test1.csv"
@@ -1317,6 +1407,10 @@ def menu():
             
         elif choice == '5':
             # Generate predictions
+            if not libraries_status["nn"]:
+                print("🛑 PyTorch libraries not available. Cannot generate predictions.")
+                continue
+                
             if test_bool is None:
                 print("🛑 Test data must be loaded before generating predictions.")
             elif clean_bool is None:
@@ -1326,6 +1420,10 @@ def menu():
                 
         elif choice == '6':
             # Display accuracy
+            if not libraries_status["data"] or not libraries_status["ml"]:
+                print("🛑 Required libraries not available. Cannot display accuracy.")
+                continue
+                
             accuracy()
             
         elif choice == '7':
