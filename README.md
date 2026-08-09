@@ -38,7 +38,7 @@ Python, Jupyter notebooks, and shell tooling with PyTorch, pandas, NumPy, scikit
 
 The repository includes an exported notebook for the data-cleaning workflow: [Data Cleaning Notebook](Notebooks/Data_Cleaning_Notebook.html).
 
-![Data cleaning notebook preview](https://noah-readme-assets-v2.vercel.app/cs3500-notebook.png)
+![Model ROC curve](https://noah-readme-assets-v3.vercel.app/CS3500-Final/asset__Final__Final__output__roc_curve.png)
 
 ## Usage
 
