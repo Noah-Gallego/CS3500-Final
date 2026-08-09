@@ -4,6 +4,10 @@ Coursework exploring data cleaning, feature preparation, and neural-network mode
 
 [![Python](https://img.shields.io/badge/python-analysis-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 
+<p align="center">
+  <img src="https://skillicons.dev/icons?i=python,pytorch,numpy,pandas&theme=light" alt="Python, PyTorch, NumPy, and pandas" />
+</p>
+
 ## Overview
 
 The repository contains a final Python pipeline, Jupyter notebooks, an exploratory analysis notebook, and a separate `bolt-job/` model runner. The project uses Los Angeles crime records to prepare features and predict crime status categories.
