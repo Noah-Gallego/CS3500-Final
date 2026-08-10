@@ -23,17 +23,6 @@ The repository contains a final Python pipeline, Jupyter notebooks, an explorato
 
 The final script loads CSV data, removes or transforms malformed fields, engineers time and categorical features, and defines PyTorch model classes including a tabular Transformer and MLP. It also imports pandas, NumPy, scikit-learn, matplotlib, seaborn, tqdm, imbalanced-learn, and optional PyTorch functionality.
 
-## Tech stack
-
-Python, Jupyter notebooks, and shell tooling with PyTorch, pandas, NumPy, scikit-learn, Matplotlib, Seaborn, and tqdm.
-
-### Important libraries
-
-- `torch` for neural-network models and training utilities
-- `pandas` and `numpy` for data cleaning and feature preparation
-- `scikit-learn` and `imbalanced-learn` for preprocessing and modeling support
-- `matplotlib`, `seaborn`, and `tqdm` for visualization and progress reporting
-
 ## Preview
 
 The repository includes an exported notebook for the data-cleaning workflow: [Data Cleaning Notebook](Notebooks/Data_Cleaning_Notebook.html).
