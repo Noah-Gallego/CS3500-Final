@@ -36,3 +36,16 @@ The repository does not include a dependency manifest or a verified one-command 
 ## Status and limitations
 
 This is course project material. Model metrics and sample output in earlier documentation are not treated as independently reproducible claims here. The data files may contain sensitive or restricted source data; use them only according to their provenance and course permissions.
+
+> [!IMPORTANT]
+> Treat the committed crime data as course-provenance material and review permissions before sharing or rerunning the pipeline outside its original context.
+
+## Modeling flow
+
+```mermaid
+flowchart LR
+    A[Crime CSV data] --> B[Cleaning and feature engineering]
+    B --> C[PyTorch MLP or tabular Transformer]
+    C --> D[Prediction helpers]
+    E[Notebooks and bolt-job runner] --> B
+```
